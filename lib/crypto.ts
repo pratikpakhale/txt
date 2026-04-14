@@ -1,5 +1,10 @@
 const ITERATIONS = 200_000;
 
+function bytesToBase64Url(bytes: Uint8Array): string {
+  const base64 = btoa(String.fromCharCode(...bytes));
+  return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
 export async function deriveKey(password: string, username: string): Promise<CryptoKey> {
   const enc = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey(
@@ -21,6 +26,13 @@ export async function deriveKey(password: string, username: string): Promise<Cry
     false,
     ["encrypt", "decrypt"]
   );
+}
+
+export async function deriveAccountIdV2(username: string, password: string): Promise<string> {
+  const enc = new TextEncoder();
+  const payload = enc.encode(`v2\u0000${username.toLowerCase()}\u0000${password}`);
+  const digest = await crypto.subtle.digest("SHA-256", payload);
+  return bytesToBase64Url(new Uint8Array(digest));
 }
 
 export async function encrypt(text: string, key: CryptoKey): Promise<string> {
