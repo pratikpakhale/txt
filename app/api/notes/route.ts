@@ -5,8 +5,10 @@ function slugify(username: string) {
   return username.toLowerCase().replace(/[^a-z0-9-_]/g, "");
 }
 
+const OPAQUE_ID_V2_REGEX = /^[A-Za-z0-9_-]{43}$/;
+
 function isOpaqueId(id: string) {
-  return /^[A-Za-z0-9_-]{20,}$/.test(id);
+  return OPAQUE_ID_V2_REGEX.test(id);
 }
 
 function v2Key(id: string) {

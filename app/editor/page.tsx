@@ -3,7 +3,11 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { deriveAccountIdV2, deriveKey, encrypt, decrypt } from "@/lib/crypto";
-import { normalizeUsername, STORAGE_V2_ENABLED } from "@/lib/storage";
+import {
+  MIGRATION_NOTICE_DELAY_MS,
+  normalizeUsername,
+  STORAGE_V2_ENABLED,
+} from "@/lib/storage";
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
@@ -22,6 +26,8 @@ export default function EditorPage() {
   const userRef = useRef<string>("");
   const normalizedUserRef = useRef<string>("");
   const accountIdRef = useRef<string>("");
+  const hadLegacyDataRef = useRef(false);
+  const migrationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -36,6 +42,10 @@ export default function EditorPage() {
     normalizedUserRef.current = normalizeUsername(user);
     if (sessionId) accountIdRef.current = sessionId;
     init(user, pw, sessionId ?? undefined);
+    return () => {
+      if (migrationTimerRef.current) clearTimeout(migrationTimerRef.current);
+      if (saveTimeout.current) clearTimeout(saveTimeout.current);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -64,6 +74,7 @@ export default function EditorPage() {
       const legacyJson = await legacyRes.json();
       data = legacyJson.data;
       source = legacyJson.source ?? "legacy";
+      if (data) hadLegacyDataRef.current = true;
     }
 
     if (data) {
@@ -80,7 +91,11 @@ export default function EditorPage() {
       updateWordCount(decrypted);
 
       if (STORAGE_V2_ENABLED && accountId && source === "legacy") {
-        const noticeTimer = setTimeout(() => setShowMigrationNotice(true), 500);
+        if (migrationTimerRef.current) clearTimeout(migrationTimerRef.current);
+        migrationTimerRef.current = setTimeout(
+          () => setShowMigrationNotice(true),
+          MIGRATION_NOTICE_DELAY_MS
+        );
         try {
           const migrateRes = await fetch("/api/notes", {
             method: "POST",
@@ -88,16 +103,18 @@ export default function EditorPage() {
             body: JSON.stringify({ id: accountId, data }),
           });
           if (migrateRes.ok) {
-            await fetch("/api/notes", {
+            const deleteRes = await fetch("/api/notes", {
               method: "DELETE",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ user }),
             });
+            if (deleteRes.ok) hadLegacyDataRef.current = false;
           }
         } catch {
           // Best-effort migration.
         } finally {
-          clearTimeout(noticeTimer);
+          if (migrationTimerRef.current) clearTimeout(migrationTimerRef.current);
+          migrationTimerRef.current = null;
           setShowMigrationNotice(false);
         }
       }
@@ -183,11 +200,18 @@ export default function EditorPage() {
           body: JSON.stringify({ id: accountIdRef.current }),
         });
       }
-      await fetch("/api/notes", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user: userRef.current }),
-      });
+      if (hadLegacyDataRef.current) {
+        const legacyDeleteRes = await fetch("/api/notes", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user: userRef.current }),
+        });
+        if (!legacyDeleteRes.ok) {
+          setDestroyError("V2 data was deleted, but legacy data still exists. Please retry delete to finish cleanup.");
+          setDestroying(false);
+          return;
+        }
+      }
 
       sessionStorage.clear();
       router.replace("/");

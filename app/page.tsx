@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { deriveAccountIdV2, deriveKey, decrypt } from "@/lib/crypto";
-import { normalizeUsername, STORAGE_V2_ENABLED } from "@/lib/storage";
+import { MIGRATION_NOTICE_DELAY_MS, normalizeUsername, STORAGE_V2_ENABLED } from "@/lib/storage";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,6 +13,11 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [step, setStep] = useState<"idle" | "deriving">("idle");
   const [showMigrationNotice, setShowMigrationNotice] = useState(false);
+  const migrationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (migrationTimerRef.current) clearTimeout(migrationTimerRef.current);
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -59,7 +64,11 @@ export default function LoginPage() {
         }
 
         if (STORAGE_V2_ENABLED && accountId && source === "legacy") {
-          const noticeTimer = setTimeout(() => setShowMigrationNotice(true), 500);
+          if (migrationTimerRef.current) clearTimeout(migrationTimerRef.current);
+          migrationTimerRef.current = setTimeout(
+            () => setShowMigrationNotice(true),
+            MIGRATION_NOTICE_DELAY_MS
+          );
           try {
             const migrateRes = await fetch("/api/notes", {
               method: "POST",
@@ -76,7 +85,8 @@ export default function LoginPage() {
           } catch {
             // Best-effort migration.
           } finally {
-            clearTimeout(noticeTimer);
+            if (migrationTimerRef.current) clearTimeout(migrationTimerRef.current);
+            migrationTimerRef.current = null;
             setShowMigrationNotice(false);
           }
         }
