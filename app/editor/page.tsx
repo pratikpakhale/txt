@@ -2,7 +2,12 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { deriveKey, encrypt, decrypt } from "@/lib/crypto";
+import { deriveAccountIdV2, deriveKey, encrypt, decrypt } from "@/lib/crypto";
+import {
+  MIGRATION_NOTICE_DELAY_MS,
+  normalizeUsername,
+  STORAGE_V2_ENABLED,
+} from "@/lib/storage";
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
@@ -16,38 +21,102 @@ export default function EditorPage() {
   const [destroyPw, setDestroyPw] = useState("");
   const [destroyError, setDestroyError] = useState("");
   const [destroying, setDestroying] = useState(false);
+  const [showMigrationNotice, setShowMigrationNotice] = useState(false);
   const keyRef = useRef<CryptoKey | null>(null);
   const userRef = useRef<string>("");
+  const normalizedUserRef = useRef<string>("");
+  const accountIdRef = useRef<string>("");
+  const hadLegacyDataRef = useRef(false);
+  const migrationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const user = sessionStorage.getItem("txt-user");
     const pw = sessionStorage.getItem("txt-pw");
+    const sessionId = sessionStorage.getItem("txt-id");
     if (!user || !pw) {
       router.replace("/");
       return;
     }
     userRef.current = user;
-    init(user, pw);
+    normalizedUserRef.current = normalizeUsername(user);
+    if (sessionId) accountIdRef.current = sessionId;
+    init(user, pw, sessionId ?? undefined);
+    return () => {
+      if (migrationTimerRef.current) clearTimeout(migrationTimerRef.current);
+      if (saveTimeout.current) clearTimeout(saveTimeout.current);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function init(user: string, pw: string) {
-    const key = await deriveKey(pw, user);
+  async function init(user: string, pw: string, sessionId?: string) {
+    const normalizedUser = normalizeUsername(user);
+    const key = await deriveKey(pw, normalizedUser);
     keyRef.current = key;
+    const accountId = STORAGE_V2_ENABLED
+      ? (sessionId || await deriveAccountIdV2(normalizedUser, pw))
+      : "";
+    accountIdRef.current = accountId;
+    if (accountId) sessionStorage.setItem("txt-id", accountId);
 
-    const res = await fetch(`/api/notes?user=${encodeURIComponent(user)}`);
-    const { data } = await res.json();
+    let data: string | null = null;
+    let source: "v2" | "legacy" | null = null;
+
+    if (STORAGE_V2_ENABLED && accountId) {
+      const v2Res = await fetch(`/api/notes?id=${encodeURIComponent(accountId)}`);
+      const v2Json = await v2Res.json();
+      data = v2Json.data;
+      source = v2Json.source ?? "v2";
+    }
+
+    if (!data) {
+      const legacyRes = await fetch(`/api/notes?user=${encodeURIComponent(user)}`);
+      const legacyJson = await legacyRes.json();
+      data = legacyJson.data;
+      source = legacyJson.source ?? "legacy";
+      if (data) hadLegacyDataRef.current = true;
+    }
 
     if (data) {
+      let decrypted = "";
       try {
-        const decrypted = await decrypt(data, key);
-        setText(decrypted);
-        updateWordCount(decrypted);
+        decrypted = await decrypt(data, key);
       } catch {
         sessionStorage.clear();
         router.replace("/");
         return;
+      }
+
+      setText(decrypted);
+      updateWordCount(decrypted);
+
+      if (STORAGE_V2_ENABLED && accountId && source === "legacy") {
+        if (migrationTimerRef.current) clearTimeout(migrationTimerRef.current);
+        migrationTimerRef.current = setTimeout(
+          () => setShowMigrationNotice(true),
+          MIGRATION_NOTICE_DELAY_MS
+        );
+        try {
+          const migrateRes = await fetch("/api/notes", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: accountId, data }),
+          });
+          if (migrateRes.ok) {
+            const deleteRes = await fetch("/api/notes", {
+              method: "DELETE",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ user }),
+            });
+            if (deleteRes.ok) hadLegacyDataRef.current = false;
+          }
+        } catch {
+          // Best-effort migration.
+        } finally {
+          if (migrationTimerRef.current) clearTimeout(migrationTimerRef.current);
+          migrationTimerRef.current = null;
+          setShowMigrationNotice(false);
+        }
       }
     }
     setLoading(false);
@@ -63,10 +132,13 @@ export default function EditorPage() {
     setStatus("saving");
     try {
       const encrypted = await encrypt(val, keyRef.current);
+      const body = STORAGE_V2_ENABLED && accountIdRef.current
+        ? { id: accountIdRef.current, data: encrypted }
+        : { user: userRef.current, data: encrypted };
       const res = await fetch("/api/notes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user: userRef.current, data: encrypted }),
+        body: JSON.stringify(body),
       });
       setStatus(res.ok ? "saved" : "error");
     } catch {
@@ -95,9 +167,20 @@ export default function EditorPage() {
 
     try {
       // Re-derive key and verify password by decrypting existing notes
-      const testKey = await deriveKey(destroyPw, userRef.current);
-      const res = await fetch(`/api/notes?user=${encodeURIComponent(userRef.current)}`);
-      const { data } = await res.json();
+      const testKey = await deriveKey(destroyPw, normalizedUserRef.current);
+      let data: string | null = null;
+
+      if (STORAGE_V2_ENABLED && accountIdRef.current) {
+        const v2Res = await fetch(`/api/notes?id=${encodeURIComponent(accountIdRef.current)}`);
+        const v2Json = await v2Res.json();
+        data = v2Json.data;
+      }
+
+      if (!data) {
+        const legacyRes = await fetch(`/api/notes?user=${encodeURIComponent(userRef.current)}`);
+        const legacyJson = await legacyRes.json();
+        data = legacyJson.data;
+      }
 
       if (data) {
         try {
@@ -110,11 +193,25 @@ export default function EditorPage() {
       }
 
       // Password verified — delete the blob
-      await fetch("/api/notes", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user: userRef.current }),
-      });
+      if (STORAGE_V2_ENABLED && accountIdRef.current) {
+        await fetch("/api/notes", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: accountIdRef.current }),
+        });
+      }
+      if (hadLegacyDataRef.current) {
+        const legacyDeleteRes = await fetch("/api/notes", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user: userRef.current }),
+        });
+        if (!legacyDeleteRes.ok) {
+          setDestroyError("V2 data was deleted, but legacy data still exists. Please retry delete to finish cleanup.");
+          setDestroying(false);
+          return;
+        }
+      }
 
       sessionStorage.clear();
       router.replace("/");
@@ -136,24 +233,23 @@ export default function EditorPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#0c0c0c] flex flex-col">
-      {/* Top bar */}
-      <header className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06]">
+    <main className="min-h-screen bg-[#0b0b0b] flex flex-col">
+      <header className="flex items-center justify-between px-6 py-3.5 border-b border-white/[0.06]">
         <div className="flex items-center gap-3">
-          <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center">
+          <div className="w-7 h-7 rounded-lg bg-white/[0.08] border border-white/10 flex items-center justify-center">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
             </svg>
           </div>
-          <span className="text-[13px] text-white/50 font-medium">{userRef.current}</span>
+          <span className="text-[12px] text-white/45 font-medium">{userRef.current}</span>
         </div>
 
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <span className="text-[12px] text-white/25">{wordCount} {wordCount === 1 ? "word" : "words"}</span>
+            <span className="text-[12px] text-white/30">{wordCount} {wordCount === 1 ? "word" : "words"}</span>
             <span className="text-white/10">·</span>
             <span className={`text-[12px] font-medium transition-colors ${
-              status === "saved" ? "text-emerald-400/70" :
+              status === "saved" ? "text-emerald-400/75" :
               status === "saving" ? "text-white/30" :
               status === "error" ? "text-red-400/70" :
               "text-white/20"
@@ -166,7 +262,7 @@ export default function EditorPage() {
 
           <button
             onClick={handleLogout}
-            className="text-[12px] text-white/25 hover:text-white/50 transition-colors px-2 py-1 rounded-lg hover:bg-white/[0.05]"
+            className="text-[12px] text-white/30 hover:text-white/60 transition-colors px-2 py-1 rounded-lg hover:bg-white/[0.06]"
           >
             Lock
           </button>
@@ -187,6 +283,9 @@ export default function EditorPage() {
 
       {/* Bottom hint */}
       <footer className="text-center pb-5">
+        {showMigrationNotice && (
+          <p className="text-[11px] text-white/35 mb-2 tracking-wide">Upgrading secure storage…</p>
+        )}
         <p className="text-[11px] text-white/15 tracking-wide">
           AES-256-GCM · encrypted in your browser · server sees nothing
         </p>

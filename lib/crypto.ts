@@ -1,4 +1,26 @@
+import { normalizeUsername } from "@/lib/storage";
+
 const ITERATIONS = 200_000;
+
+function bytesToBinaryString(bytes: Uint8Array): string {
+  let binary = "";
+  const CHUNK_SIZE = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK_SIZE));
+  }
+  return binary;
+}
+
+function bytesToBase64Url(bytes: Uint8Array): string {
+  const binary = bytesToBinaryString(bytes);
+  const base64 = btoa(binary);
+  return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  const binary = bytesToBinaryString(bytes);
+  return btoa(binary);
+}
 
 export async function deriveKey(password: string, username: string): Promise<CryptoKey> {
   const enc = new TextEncoder();
@@ -23,6 +45,13 @@ export async function deriveKey(password: string, username: string): Promise<Cry
   );
 }
 
+export async function deriveAccountIdV2(username: string, password: string): Promise<string> {
+  const enc = new TextEncoder();
+  const payload = enc.encode(`v2\u0000${normalizeUsername(username)}\u0000${password}`);
+  const digest = await crypto.subtle.digest("SHA-256", payload);
+  return bytesToBase64Url(new Uint8Array(digest));
+}
+
 export async function encrypt(text: string, key: CryptoKey): Promise<string> {
   const enc = new TextEncoder();
   const iv = crypto.getRandomValues(new Uint8Array(12));
@@ -34,7 +63,7 @@ export async function encrypt(text: string, key: CryptoKey): Promise<string> {
   const combined = new Uint8Array(12 + encrypted.byteLength);
   combined.set(iv, 0);
   combined.set(new Uint8Array(encrypted), 12);
-  return btoa(String.fromCharCode(...combined));
+  return bytesToBase64(combined);
 }
 
 export async function decrypt(base64: string, key: CryptoKey): Promise<string> {

@@ -11,13 +11,17 @@
 - Enter any **username + password** — no signup, no account creation
 - Your notes are encrypted in the browser using **AES-256-GCM** before leaving your device
 - The encryption key is derived from your password via **PBKDF2** (200k iterations, SHA-256)
-- The server stores only opaque encrypted bytes — it cannot read your notes
+- Storage key is an opaque account id:
+  - `accountIdV2 = base64url(SHA-256("v2" || 0x00 || normalizedUsername || 0x00 || password))`
+  - blobs are stored at `notes/v2/{accountIdV2}.enc`
+  - server never needs to store usernames for new writes
+- Legacy data (`notes/{username}.enc`) is migrated automatically on successful unlock
 - Wrong password → AES-GCM auth tag fails → locked out, permanently. No recovery.
 
 ## Stack
 
 - **Next.js** (App Router)
-- **Vercel Blob** — stores `notes/{username}.enc`
+- **Vercel Blob** — stores `notes/v2/{accountId}.enc` (legacy `notes/{username}.enc` supported for migration)
 - **WebCrypto API** — all encryption happens client-side, zero deps
 
 ## Encryption details
@@ -46,3 +50,8 @@ npm run dev
 ```
 
 Deploy to Vercel and attach a Blob store — that's it.
+
+## Storage rollout flag
+
+- `NEXT_PUBLIC_STORAGE_V2=0` disables v2 id mode and keeps legacy user-keyed storage.
+- By default, v2 storage is enabled.
