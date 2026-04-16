@@ -223,38 +223,40 @@ export default function EditorPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#080808] flex items-center justify-center">
-        <div className="w-5 h-5 border-2 border-white/10 border-t-white/50 rounded-full animate-spin" />
+      <main className="min-h-dvh bg-[#080808] flex items-center justify-center">
+        <span className="size-1.5 rounded-full bg-white/30 animate-pulse" />
       </main>
     );
   }
 
   const dotClass =
     status === "saved"
-      ? "bg-emerald-500/60"
+      ? "bg-emerald-400/50"
       : status === "saving"
       ? "bg-white/40 animate-pulse"
       : status === "error"
       ? "bg-red-500/60"
-      : "bg-white/10";
+      : "bg-white/[0.08]";
 
   return (
-    <main className="min-h-screen bg-[#080808] flex flex-col">
-      <header className="h-11 border-b border-white/[0.05] px-5 flex items-center justify-between">
-        <span className="text-[13px] text-white/30 font-medium tracking-[-0.03em]">
+    <main className="min-h-dvh bg-[#080808] flex flex-col">
+      <header className="h-12 border-b border-white/[0.06] px-5 flex items-center justify-between">
+        <span className="text-[13px] text-white/30 font-medium tracking-[-0.04em]">
           txt
         </span>
 
-        <div className="flex items-center gap-3">
-          <span className="text-[12px] text-white/20 tabular-nums">{wordCount}</span>
+        <div className="flex items-center gap-4">
+          <span className="text-[11px] text-white/20 tabular-nums tracking-tight">
+            {wordCount}
+          </span>
           <span
-            className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${dotClass}`}
+            className={`size-1.5 rounded-full transition-colors duration-300 ${dotClass}`}
             aria-label={status}
           />
           <button
             onClick={handleLogout}
             aria-label="Lock"
-            className="text-white/25 hover:text-white/50 transition-colors"
+            className="text-white/20 hover:text-white/60 transition-colors duration-200"
           >
             <svg
               width="14"
@@ -274,36 +276,46 @@ export default function EditorPage() {
       </header>
 
       <textarea
-        className="flex-1 w-full max-w-[680px] mx-auto px-6 py-8 bg-transparent text-[15px] font-mono text-white/70 leading-[1.85] resize-none focus:outline-none placeholder:text-white/15"
+        className="flex-1 w-full max-w-[680px] mx-auto px-6 py-12 bg-transparent text-[14px] text-white/80 leading-[1.85] tracking-[-0.005em] resize-none focus:outline-none placeholder:text-white/15 selection:bg-white/15"
         value={text}
         onChange={(e) => handleChange(e.target.value)}
         autoFocus
-        style={{ minHeight: "calc(100vh - 44px)", fontFamily: "var(--font-geist-mono), ui-monospace, monospace" }}
+        style={{
+          fontFamily: "var(--font-geist-mono), ui-monospace, monospace",
+          minHeight: "calc(100dvh - 96px)",
+        }}
       />
 
-      <footer className="text-center py-4">
-        {showMigrationNotice && (
-          <p className="text-[11px] text-white/25 mb-1 tracking-wide">Upgrading secure storage…</p>
-        )}
-        <p className="text-[11px] text-white/[0.08] tracking-wide">
+      <footer className="border-t border-white/[0.06] px-5 h-12 flex items-center justify-between">
+        <p className="text-[11px] text-white/[0.18] tracking-[-0.01em]">
           AES-256-GCM · encrypted in your browser · server sees nothing
         </p>
-        <button
-          onClick={() => { setShowDestroy(true); setDestroyPw(""); setDestroyError(""); }}
-          className="mt-1 text-[11px] text-red-950 hover:text-red-600 transition-colors"
-        >
-          destroy
-        </button>
+        <div className="flex items-center gap-4">
+          {showMigrationNotice && (
+            <span className="text-[11px] text-white/20 tracking-[-0.01em]">
+              upgrading…
+            </span>
+          )}
+          <button
+            onClick={() => { setShowDestroy(true); setDestroyPw(""); setDestroyError(""); }}
+            className="text-[11px] text-white/[0.10] hover:text-red-500/70 transition-colors duration-200 tracking-[-0.01em]"
+          >
+            destroy
+          </button>
+        </div>
       </footer>
 
       {showDestroy && (
-        <div className="fixed inset-0 bg-[#080808]/85 backdrop-blur-sm flex items-center justify-center px-6 z-50">
-          <div className="w-full max-w-[320px] bg-[#0c0c0c] border border-white/[0.06] rounded-lg p-6 flex flex-col gap-5">
+        <div
+          className="fixed inset-0 bg-[#080808]/85 backdrop-blur-md flex items-center justify-center px-6 z-50"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowDestroy(false); }}
+        >
+          <div className="w-full max-w-[320px] bg-[#0c0c0c] border border-white/[0.06] rounded-xl p-6 flex flex-col gap-5 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.7)]">
             <div className="flex flex-col gap-1.5">
-              <p className="text-[13px] text-white/80 font-medium tracking-[-0.02em]">
+              <p className="text-[13px] text-white font-medium tracking-[-0.02em]">
                 destroy account
               </p>
-              <p className="text-[12px] text-white/30 leading-relaxed">
+              <p className="text-[12px] text-white/50 leading-[1.55] tracking-[-0.01em]">
                 Permanently deletes all notes and removes your account. No recovery.
               </p>
             </div>
@@ -315,25 +327,27 @@ export default function EditorPage() {
                 value={destroyPw}
                 onChange={(e) => setDestroyPw(e.target.value)}
                 autoFocus
-                className="w-full bg-white/[0.04] border border-white/[0.07] rounded-lg px-4 py-[11px] text-[14px] text-white placeholder:text-white/25 focus:outline-none focus:border-white/20 transition-colors"
+                className="w-full h-11 bg-white/[0.04] border border-white/[0.06] rounded-lg px-3.5 text-[14px] text-white tracking-[-0.01em] placeholder:text-white/20 focus:border-white/20 transition-colors duration-200"
               />
 
-              {destroyError && (
-                <p className="text-[12px] text-red-400/70">{destroyError}</p>
-              )}
+              <div className="min-h-[16px]">
+                {destroyError && (
+                  <p className="text-[11px] text-red-400/60 tracking-[-0.01em]">{destroyError}</p>
+                )}
+              </div>
 
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => setShowDestroy(false)}
-                  className="flex-1 py-[11px] rounded-lg text-[13px] text-white/50 hover:text-white/80 bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
+                  className="flex-1 h-11 rounded-lg text-[13px] text-white/50 hover:text-white bg-white/[0.04] hover:bg-white/[0.06] transition-colors duration-200"
                 >
                   cancel
                 </button>
                 <button
                   type="submit"
                   disabled={destroying || !destroyPw}
-                  className="flex-1 py-[11px] rounded-lg text-[13px] font-medium text-white bg-red-600 hover:bg-red-500 transition-colors disabled:opacity-25 disabled:cursor-not-allowed"
+                  className="flex-1 h-11 rounded-lg text-[13px] font-medium text-white bg-red-600/80 hover:bg-red-600 transition-colors duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   {destroying ? "destroying…" : "destroy"}
                 </button>
