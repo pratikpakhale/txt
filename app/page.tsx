@@ -112,7 +112,7 @@ export default function LoginPage() {
     "w-full h-11 bg-white/[0.04] border border-white/[0.06] rounded-lg px-3.5 text-[14px] text-white tracking-[-0.01em] placeholder:text-white/20 focus:border-white/20 transition-colors duration-200";
 
   return (
-    <main className="min-h-dvh bg-[#080808] flex items-center justify-center px-6">
+    <main className="min-h-dvh bg-[#0d0b09] flex items-center justify-center px-6">
       <div className="w-full max-w-[300px] flex flex-col gap-10">
         <header className="flex flex-col gap-1">
           <h1 className="text-[26px] font-medium tracking-[-0.04em] text-white leading-none">
@@ -145,7 +145,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading || !username.trim() || !password}
-            className="mt-2 w-full h-11 bg-white text-[#080808] rounded-lg text-[13px] font-medium tracking-[-0.01em] hover:bg-white/90 transition-colors duration-200 disabled:bg-white/[0.06] disabled:text-white/30 disabled:cursor-not-allowed"
+            className="mt-2 w-full h-11 bg-white text-[#0d0b09] rounded-lg text-[13px] font-medium tracking-[-0.01em] hover:bg-white/90 transition-colors duration-200 disabled:bg-white/[0.06] disabled:text-white/30 disabled:cursor-not-allowed"
           >
             {loading
               ? step === "deriving"

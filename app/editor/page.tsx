@@ -223,7 +223,7 @@ export default function EditorPage() {
 
   if (loading) {
     return (
-      <main className="min-h-dvh bg-[#080808] flex items-center justify-center">
+      <main className="min-h-dvh bg-[#0d0b09] flex items-center justify-center">
         <span className="size-1.5 rounded-full bg-white/30 animate-pulse" />
       </main>
     );
@@ -239,7 +239,7 @@ export default function EditorPage() {
       : "bg-white/[0.08]";
 
   return (
-    <main className="min-h-dvh bg-[#080808] flex flex-col">
+    <main className="min-h-dvh bg-[#0d0b09] flex flex-col">
       <header className="h-12 border-b border-white/[0.06] px-5 flex items-center justify-between">
         <span className="text-[13px] text-white/30 font-medium tracking-[-0.04em]">
           txt
@@ -307,10 +307,10 @@ export default function EditorPage() {
 
       {showDestroy && (
         <div
-          className="fixed inset-0 bg-[#080808]/85 backdrop-blur-md flex items-center justify-center px-6 z-50"
+          className="fixed inset-0 bg-[#0d0b09]/85 backdrop-blur-md flex items-center justify-center px-6 z-50"
           onClick={(e) => { if (e.target === e.currentTarget) setShowDestroy(false); }}
         >
-          <div className="w-full max-w-[320px] bg-[#0c0c0c] border border-white/[0.06] rounded-xl p-6 flex flex-col gap-5 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.7)]">
+          <div className="w-full max-w-[320px] bg-[#110e0b] border border-white/[0.06] rounded-xl p-6 flex flex-col gap-5 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.7)]">
             <div className="flex flex-col gap-1.5">
               <p className="text-[13px] text-white font-medium tracking-[-0.02em]">
                 destroy account
