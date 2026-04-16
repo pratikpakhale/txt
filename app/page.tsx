@@ -110,10 +110,10 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen bg-[#080808] flex items-center justify-center px-6">
-      <div className="w-full max-w-[340px]">
+      <div className="w-full max-w-[320px] flex flex-col gap-6">
         <h1
-          className="text-[28px] text-white text-center mb-12"
-          style={{ fontWeight: 500, letterSpacing: "-0.04em" }}
+          className="text-[26px] font-medium tracking-[-0.05em] text-white"
+          style={{ fontFamily: "var(--font-geist-sans)" }}
         >
           txt
         </h1>
@@ -127,7 +127,7 @@ export default function LoginPage() {
               onChange={(e) => setUsername(e.target.value)}
               autoComplete="username"
               autoFocus
-              className="w-full bg-white/[0.025] border border-white/[0.07] rounded-xl px-4 py-3 text-[14px] text-white placeholder:text-white/25 focus:outline-none focus:border-white/20 focus:bg-white/[0.04] transition-all duration-200"
+              className="w-full bg-white/[0.04] border border-white/[0.07] rounded-lg px-4 py-[11px] text-[14px] text-white placeholder:text-white/25 focus:outline-none focus:border-white/20 transition-colors"
             />
             <input
               type="password"
@@ -135,14 +135,14 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
-              className="w-full bg-white/[0.025] border border-white/[0.07] rounded-xl px-4 py-3 text-[14px] text-white placeholder:text-white/25 focus:outline-none focus:border-white/20 focus:bg-white/[0.04] transition-all duration-200"
+              className="w-full bg-white/[0.04] border border-white/[0.07] rounded-lg px-4 py-[11px] text-[14px] text-white placeholder:text-white/25 focus:outline-none focus:border-white/20 transition-colors"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading || !username.trim() || !password}
-            className="mt-2 w-full bg-white text-[#080808] rounded-xl py-3 text-[14px] font-medium hover:bg-white/90 transition-all duration-200 disabled:opacity-20 disabled:cursor-not-allowed"
+            className="w-full bg-white text-[#080808] rounded-lg py-[11px] text-[14px] font-medium hover:bg-white/90 transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
           >
             {loading
               ? step === "deriving"
@@ -152,10 +152,10 @@ export default function LoginPage() {
           </button>
 
           {error && (
-            <p className="text-[12px] text-red-500/50 text-center mt-1">{error}</p>
+            <p className="text-[12px] text-red-400/70">{error}</p>
           )}
           {showMigrationNotice && (
-            <p className="text-[11px] text-white/30 text-center mt-1">Upgrading secure storage…</p>
+            <p className="text-[11px] text-white/25">Upgrading secure storage…</p>
           )}
         </form>
       </div>

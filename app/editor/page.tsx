@@ -231,37 +231,34 @@ export default function EditorPage() {
 
   const dotClass =
     status === "saved"
-      ? "bg-emerald-400"
+      ? "bg-emerald-500/60"
       : status === "saving"
-      ? "bg-white animate-pulse"
+      ? "bg-white/40 animate-pulse"
       : status === "error"
-      ? "bg-red-500"
-      : "bg-white/20";
+      ? "bg-red-500/60"
+      : "bg-white/10";
 
   return (
     <main className="min-h-screen bg-[#080808] flex flex-col">
-      <header className="flex items-center justify-between px-8 py-5">
-        <span
-          className="text-[13px] text-white/30"
-          style={{ fontWeight: 500, letterSpacing: "-0.02em" }}
-        >
+      <header className="h-11 border-b border-white/[0.05] px-5 flex items-center justify-between">
+        <span className="text-[13px] text-white/30 font-medium tracking-[-0.03em]">
           txt
         </span>
 
-        <div className="flex items-center gap-5">
+        <div className="flex items-center gap-3">
+          <span className="text-[12px] text-white/20 tabular-nums">{wordCount}</span>
           <span
             className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${dotClass}`}
             aria-label={status}
           />
-          <span className="text-[12px] text-white/30 tabular-nums">{wordCount}</span>
           <button
             onClick={handleLogout}
             aria-label="Lock"
-            className="text-white/30 hover:text-white/70 transition-colors duration-200"
+            className="text-white/25 hover:text-white/50 transition-colors"
           >
             <svg
-              width="15"
-              height="15"
+              width="14"
+              height="14"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -276,68 +273,67 @@ export default function EditorPage() {
         </div>
       </header>
 
-      <div className="flex-1 flex flex-col w-full max-w-2xl mx-auto px-6 pb-10">
-        <textarea
-          className="flex-1 w-full bg-transparent font-mono text-[15px] text-white/75 leading-[1.9] resize-none focus:outline-none placeholder:text-white/15"
-          value={text}
-          onChange={(e) => handleChange(e.target.value)}
-          autoFocus
-          style={{ minHeight: "calc(100vh - 180px)", fontFamily: "var(--font-geist-mono), ui-monospace, monospace" }}
-        />
-      </div>
+      <textarea
+        className="flex-1 w-full max-w-[680px] mx-auto px-6 py-8 bg-transparent text-[15px] font-mono text-white/70 leading-[1.85] resize-none focus:outline-none placeholder:text-white/15"
+        value={text}
+        onChange={(e) => handleChange(e.target.value)}
+        autoFocus
+        style={{ minHeight: "calc(100vh - 44px)", fontFamily: "var(--font-geist-mono), ui-monospace, monospace" }}
+      />
 
-      <footer className="text-center pb-6 px-6">
+      <footer className="text-center py-4">
         {showMigrationNotice && (
-          <p className="text-[11px] text-white/25 mb-2 tracking-wide">Upgrading secure storage…</p>
+          <p className="text-[11px] text-white/25 mb-1 tracking-wide">Upgrading secure storage…</p>
         )}
-        <p className="text-[10.5px] text-white/10 tracking-wide">
+        <p className="text-[11px] text-white/[0.08] tracking-wide">
           AES-256-GCM · encrypted in your browser · server sees nothing
         </p>
         <button
           onClick={() => { setShowDestroy(true); setDestroyPw(""); setDestroyError(""); }}
-          className="mt-3 text-[10.5px] text-red-950 hover:text-red-600 transition-colors duration-200"
+          className="mt-1 text-[11px] text-red-950 hover:text-red-600 transition-colors"
         >
           destroy
         </button>
       </footer>
 
       {showDestroy && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center px-6 z-50">
-          <div className="w-full max-w-[340px] bg-[#0d0d0d] border border-white/[0.06] rounded-2xl p-6">
-            <p className="text-[13px] text-red-500/80 mb-1.5" style={{ fontWeight: 500 }}>
-              destroy account
-            </p>
-            <p className="text-[12.5px] text-white/35 leading-relaxed mb-5">
-              Permanently deletes all notes and removes your account. No recovery.
-            </p>
+        <div className="fixed inset-0 bg-[#080808]/85 backdrop-blur-sm flex items-center justify-center px-6 z-50">
+          <div className="w-full max-w-[320px] bg-[#0c0c0c] border border-white/[0.06] rounded-lg p-6 flex flex-col gap-5">
+            <div className="flex flex-col gap-1.5">
+              <p className="text-[13px] text-white/80 font-medium tracking-[-0.02em]">
+                destroy account
+              </p>
+              <p className="text-[12px] text-white/30 leading-relaxed">
+                Permanently deletes all notes and removes your account. No recovery.
+              </p>
+            </div>
 
-            <form onSubmit={handleDestroy} className="flex flex-col gap-2.5">
+            <form onSubmit={handleDestroy} className="flex flex-col gap-3">
               <input
                 type="password"
                 placeholder="password"
                 value={destroyPw}
                 onChange={(e) => setDestroyPw(e.target.value)}
                 autoFocus
-                className="w-full bg-white/[0.025] border border-white/[0.07] rounded-xl px-4 py-3 text-[14px] text-white placeholder:text-white/25 focus:outline-none focus:border-red-900/60 transition-all duration-200"
+                className="w-full bg-white/[0.04] border border-white/[0.07] rounded-lg px-4 py-[11px] text-[14px] text-white placeholder:text-white/25 focus:outline-none focus:border-white/20 transition-colors"
               />
 
               {destroyError && (
-                <p className="text-[12px] text-red-500/60 px-1">{destroyError}</p>
+                <p className="text-[12px] text-red-400/70">{destroyError}</p>
               )}
 
-              <div className="flex gap-2 mt-2">
+              <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => setShowDestroy(false)}
-                  className="flex-1 py-2.5 rounded-xl text-[13px] text-white/45 hover:text-white/70 bg-white/[0.03] hover:bg-white/[0.06] transition-all duration-200"
+                  className="flex-1 py-[11px] rounded-lg text-[13px] text-white/50 hover:text-white/80 bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
                 >
                   cancel
                 </button>
                 <button
                   type="submit"
                   disabled={destroying || !destroyPw}
-                  className="flex-1 py-2.5 rounded-xl text-[13px] text-red-400/90 bg-red-950/40 hover:bg-red-950/70 border border-red-900/30 transition-all duration-200 disabled:opacity-25 disabled:cursor-not-allowed"
-                  style={{ fontWeight: 500 }}
+                  className="flex-1 py-[11px] rounded-lg text-[13px] font-medium text-white bg-red-600 hover:bg-red-500 transition-colors disabled:opacity-25 disabled:cursor-not-allowed"
                 >
                   {destroying ? "destroying…" : "destroy"}
                 </button>
