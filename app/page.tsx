@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 import { deriveAccountIdV2, deriveKey, decrypt } from "@/lib/crypto";
 import { MIGRATION_NOTICE_DELAY_MS, normalizeUsername, STORAGE_V2_ENABLED } from "@/lib/storage";
 
@@ -109,16 +110,37 @@ export default function LoginPage() {
   }
 
   const inputClass =
-    "w-full h-11 bg-white/[0.04] border border-white/[0.06] rounded-lg px-3.5 text-[14px] text-white tracking-[-0.01em] placeholder:text-white/20 focus:border-white/20 transition-colors duration-200";
+    "w-full h-11 rounded-lg px-3.5 text-[14px] tracking-[-0.01em] transition-colors duration-200";
+
+  const { theme, setTheme } = useTheme();
 
   return (
-    <main className="min-h-dvh bg-[#0d0b09] flex items-center justify-center px-6">
+    <main className="min-h-dvh flex items-center justify-center px-6" style={{ background: "var(--bg)" }}>
       <div className="w-full max-w-[300px] flex flex-col gap-10">
         <header className="flex flex-col gap-1">
-          <h1 className="text-[26px] font-medium tracking-[-0.04em] text-white leading-none">
-            txt
-          </h1>
-          <p className="text-[12px] text-white/30 tracking-[-0.01em]">
+          <div className="flex items-center justify-between">
+            <h1 className="text-[26px] font-medium tracking-[-0.04em] leading-none" style={{ color: "var(--text-primary)" }}>
+              txt
+            </h1>
+            <button
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              aria-label="Toggle theme"
+              className="transition-colors duration-200"
+              style={{ color: "var(--text-muted)" }}
+            >
+              {theme === "dark" ? (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="4"/>
+                  <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
+                </svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+              )}
+            </button>
+          </div>
+          <p className="text-[12px] tracking-[-0.01em]" style={{ color: "var(--text-muted)" }}>
             encrypted notes
           </p>
         </header>
@@ -132,6 +154,7 @@ export default function LoginPage() {
             autoComplete="username"
             autoFocus
             className={inputClass}
+            style={{ background: "var(--border)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
           />
           <input
             type="password"
@@ -140,12 +163,14 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="current-password"
             className={inputClass}
+            style={{ background: "var(--border)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
           />
 
           <button
             type="submit"
             disabled={loading || !username.trim() || !password}
-            className="mt-2 w-full h-11 bg-white text-[#0d0b09] rounded-lg text-[13px] font-medium tracking-[-0.01em] hover:bg-white/90 transition-colors duration-200 disabled:bg-white/[0.06] disabled:text-white/30 disabled:cursor-not-allowed"
+            className="mt-2 w-full h-11 rounded-lg text-[13px] font-medium tracking-[-0.01em] transition-colors duration-200 disabled:cursor-not-allowed"
+            style={{ background: "var(--text-primary)", color: "var(--bg)" }}
           >
             {loading
               ? step === "deriving"
@@ -159,7 +184,7 @@ export default function LoginPage() {
               <p className="text-[11px] text-red-400/60 tracking-[-0.01em]">{error}</p>
             )}
             {!error && showMigrationNotice && (
-              <p className="text-[11px] text-white/20 tracking-[-0.01em]">Upgrading secure storage…</p>
+              <p className="text-[11px] tracking-[-0.01em]" style={{ color: "var(--text-faint)" }}>Upgrading secure storage…</p>
             )}
           </div>
         </form>

@@ -2,17 +2,24 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 import { deriveAccountIdV2, deriveKey, encrypt, decrypt } from "@/lib/crypto";
 import {
   MIGRATION_NOTICE_DELAY_MS,
   normalizeUsername,
   STORAGE_V2_ENABLED,
 } from "@/lib/storage";
+import dynamic from "next/dynamic";
+
+const MilkdownEditor = dynamic(() => import("./MilkdownEditor"), {
+  ssr: false,
+});
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 export default function EditorPage() {
   const router = useRouter();
+  const { theme, setTheme } = useTheme();
   const [text, setText] = useState("");
   const [status, setStatus] = useState<SaveStatus>("idle");
   const [loading, setLoading] = useState(true);
@@ -223,7 +230,7 @@ export default function EditorPage() {
 
   if (loading) {
     return (
-      <main className="min-h-dvh bg-[#0d0b09] flex items-center justify-center">
+    <main className="min-h-dvh flex items-center justify-center" style={{ background: "var(--bg)" }}>
         <span className="size-1.5 rounded-full bg-white/30 animate-pulse" />
       </main>
     );
@@ -239,14 +246,20 @@ export default function EditorPage() {
       : "bg-white/[0.08]";
 
   return (
-    <main className="min-h-dvh bg-[#0d0b09] flex flex-col">
-      <header className="h-12 border-b border-white/[0.06] px-5 flex items-center justify-between">
-        <span className="text-[13px] text-white/30 font-medium tracking-[-0.04em]">
+    <main className="min-h-dvh flex flex-col" style={{ background: "var(--bg)", color: "var(--text-primary)" }}>
+      <header className="h-12 px-5 flex items-center justify-between" style={{ borderBottom: "1px solid var(--border)" }}>
+        <button
+          onClick={handleLogout}
+          className="text-[13px] font-medium tracking-[-0.04em] transition-colors duration-200"
+          style={{ color: "var(--text-muted)" }}
+          onMouseEnter={e => (e.currentTarget.style.color = "var(--text-primary)")}
+          onMouseLeave={e => (e.currentTarget.style.color = "var(--text-muted)")}  
+        >
           txt
-        </span>
+        </button>
 
         <div className="flex items-center gap-4">
-          <span className="text-[11px] text-white/20 tabular-nums tracking-tight">
+      <span className="text-[11px] tabular-nums tracking-tight" style={{ color: "var(--text-faint)" }}>
             {wordCount}
           </span>
           <span
@@ -254,9 +267,38 @@ export default function EditorPage() {
             aria-label={status}
           />
           <button
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            aria-label="Toggle theme"
+            className="transition-colors duration-200"
+            style={{ color: "var(--text-muted)" }}
+          >
+            {theme === "dark" ? (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="4"/>
+                <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
+              </svg>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+              </svg>
+            )}
+          </button>
+          <button
+            onClick={() => { setShowDestroy(true); setDestroyPw(""); setDestroyError(""); }}
+            className="text-[11px] transition-colors duration-200 tracking-[-0.01em]"
+            style={{ color: "var(--text-dimmer)" }}
+            onMouseEnter={e => (e.currentTarget.style.color = "rgba(239,68,68,0.7)")}
+            onMouseLeave={e => (e.currentTarget.style.color = "var(--text-dimmer)")}  
+          >
+            destroy
+          </button>
+          <button
             onClick={handleLogout}
             aria-label="Lock"
-            className="text-white/20 hover:text-white/60 transition-colors duration-200"
+            className="transition-colors duration-200"
+            style={{ color: "var(--text-muted)" }}
+            onMouseEnter={e => (e.currentTarget.style.color = "var(--text-primary)")}
+            onMouseLeave={e => (e.currentTarget.style.color = "var(--text-muted)")}
           >
             <svg
               width="14"
@@ -275,47 +317,33 @@ export default function EditorPage() {
         </div>
       </header>
 
-      <textarea
-        className="flex-1 w-full max-w-[680px] mx-auto px-6 py-12 bg-transparent text-[14px] text-white/80 leading-[1.85] tracking-[-0.005em] resize-none focus:outline-none placeholder:text-white/15 selection:bg-white/15"
-        value={text}
-        onChange={(e) => handleChange(e.target.value)}
-        autoFocus
-        style={{
-          fontFamily: "var(--font-geist-mono), ui-monospace, monospace",
-          minHeight: "calc(100dvh - 96px)",
-        }}
-      />
+      <div
+        className="flex-1 w-full max-w-[680px] mx-auto px-6 py-12"
+        style={{ minHeight: "calc(100dvh - 96px)" }}
+      >
+        <MilkdownEditor defaultValue={text} onChange={handleChange} />
+      </div>
 
-      <footer className="border-t border-white/[0.06] px-5 h-12 flex items-center justify-between">
-        <p className="text-[11px] text-white/[0.18] tracking-[-0.01em]">
-          AES-256-GCM · encrypted in your browser · server sees nothing
-        </p>
-        <div className="flex items-center gap-4">
-          {showMigrationNotice && (
-            <span className="text-[11px] text-white/20 tracking-[-0.01em]">
-              upgrading…
-            </span>
-          )}
-          <button
-            onClick={() => { setShowDestroy(true); setDestroyPw(""); setDestroyError(""); }}
-            className="text-[11px] text-white/[0.10] hover:text-red-500/70 transition-colors duration-200 tracking-[-0.01em]"
-          >
-            destroy
-          </button>
-        </div>
-      </footer>
+      {showMigrationNotice && (
+        <footer className="px-5 h-12 flex items-center justify-end" style={{ borderTop: "1px solid var(--border)" }}>
+          <span className="text-[11px] tracking-[-0.01em]" style={{ color: "var(--text-faint)" }}>
+            upgrading…
+          </span>
+        </footer>
+      )}
 
       {showDestroy && (
         <div
-          className="fixed inset-0 bg-[#0d0b09]/85 backdrop-blur-md flex items-center justify-center px-6 z-50"
+          className="fixed inset-0 backdrop-blur-md flex items-center justify-center px-6 z-50"
+          style={{ background: "color-mix(in srgb, var(--bg) 85%, transparent)" }}
           onClick={(e) => { if (e.target === e.currentTarget) setShowDestroy(false); }}
         >
-          <div className="w-full max-w-[320px] bg-[#110e0b] border border-white/[0.06] rounded-xl p-6 flex flex-col gap-5 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.7)]">
+          <div className="w-full max-w-[320px] rounded-xl p-6 flex flex-col gap-5 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.4)]" style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }}>
             <div className="flex flex-col gap-1.5">
-              <p className="text-[13px] text-white font-medium tracking-[-0.02em]">
+              <p className="text-[13px] font-medium tracking-[-0.02em]" style={{ color: "var(--text-primary)" }}>
                 destroy account
               </p>
-              <p className="text-[12px] text-white/50 leading-[1.55] tracking-[-0.01em]">
+              <p className="text-[12px] leading-[1.55] tracking-[-0.01em]" style={{ color: "var(--text-muted)" }}>
                 Permanently deletes all notes and removes your account. No recovery.
               </p>
             </div>
@@ -327,7 +355,8 @@ export default function EditorPage() {
                 value={destroyPw}
                 onChange={(e) => setDestroyPw(e.target.value)}
                 autoFocus
-                className="w-full h-11 bg-white/[0.04] border border-white/[0.06] rounded-lg px-3.5 text-[14px] text-white tracking-[-0.01em] placeholder:text-white/20 focus:border-white/20 transition-colors duration-200"
+                className="w-full h-11 rounded-lg px-3.5 text-[14px] tracking-[-0.01em] transition-colors duration-200"
+                style={{ background: "var(--border)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
               />
 
               <div className="min-h-[16px]">
