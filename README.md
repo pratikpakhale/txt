@@ -34,8 +34,8 @@ blob = IV (12 bytes) || AES-GCM ciphertext
 ## Self-hosting
 
 ```bash
-git clone https://github.com/pratikpakhale/txt-pad
-cd txt-pad
+git clone https://github.com/pratikpakhale/txt
+cd txt
 npm install
 ```
 
