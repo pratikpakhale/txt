@@ -286,9 +286,9 @@ export default function EditorPage() {
           <button
             onClick={() => { setShowDestroy(true); setDestroyPw(""); setDestroyError(""); }}
             className="text-[11px] transition-colors duration-200 tracking-[-0.01em]"
-            style={{ color: "var(--text-dimmer)" }}
+            style={{ color: "var(--text-faint)" }}
             onMouseEnter={e => (e.currentTarget.style.color = "rgba(239,68,68,0.7)")}
-            onMouseLeave={e => (e.currentTarget.style.color = "var(--text-dimmer)")}  
+            onMouseLeave={e => (e.currentTarget.style.color = "var(--text-faint)")}  
           >
             destroy
           </button>
