@@ -38,7 +38,7 @@ export default function EditorPage() {
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    const user = sessionStorage.getItem("txt-user");
+    const user = sessionStorage.getItem("txt-note-id") ?? sessionStorage.getItem("txt-user");
     const pw = sessionStorage.getItem("txt-pw");
     const sessionId = sessionStorage.getItem("txt-id");
     if (!user || !pw) {
