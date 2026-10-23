@@ -1,118 +1,23 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { deriveAccountIdV2, deriveKey, decrypt } from "@/lib/crypto";
-import { MIGRATION_NOTICE_DELAY_MS, normalizeUsername, STORAGE_V2_ENABLED } from "@/lib/storage";
 
-export default function LoginPage() {
+export default function HomePage() {
   const router = useRouter();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [step, setStep] = useState<"idle" | "deriving">("idle");
-  const [showMigrationNotice, setShowMigrationNotice] = useState(false);
-  const migrationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { theme, setTheme } = useTheme();
+  const [noteId, setNoteId] = useState("");
 
-  useEffect(() => () => {
-    if (migrationTimerRef.current) clearTimeout(migrationTimerRef.current);
-  }, []);
-
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!username.trim() || !password) return;
-    const inputUsername = username.trim();
-    const normalizedUsername = normalizeUsername(inputUsername);
-    setError("");
-    setLoading(true);
-    setStep("deriving");
-    setShowMigrationNotice(false);
-
-    try {
-      const key = await deriveKey(password, normalizedUsername);
-      const accountId = STORAGE_V2_ENABLED
-        ? await deriveAccountIdV2(normalizedUsername, password)
-        : null;
-
-      let source: "v2" | "legacy" | null = null;
-      let data: string | null = null;
-
-      if (STORAGE_V2_ENABLED && accountId) {
-        const v2Res = await fetch(`/api/notes?id=${encodeURIComponent(accountId)}`);
-        const v2Json = await v2Res.json();
-        data = v2Json.data;
-        source = v2Json.source ?? "v2";
-      }
-
-      if (!data) {
-        const legacyRes = await fetch(`/api/notes?user=${encodeURIComponent(inputUsername)}`);
-        const legacyJson = await legacyRes.json();
-        data = legacyJson.data;
-        source = legacyJson.source ?? "legacy";
-      }
-
-      if (data) {
-        // Existing user — try to decrypt
-        try {
-          await decrypt(data, key);
-        } catch {
-          setError("Wrong password. No way to recover.");
-          setLoading(false);
-          setStep("idle");
-          return;
-        }
-
-        if (STORAGE_V2_ENABLED && accountId && source === "legacy") {
-          if (migrationTimerRef.current) clearTimeout(migrationTimerRef.current);
-          migrationTimerRef.current = setTimeout(
-            () => setShowMigrationNotice(true),
-            MIGRATION_NOTICE_DELAY_MS
-          );
-          try {
-            const migrateRes = await fetch("/api/notes", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ id: accountId, data }),
-            });
-            if (migrateRes.ok) {
-              await fetch("/api/notes", {
-                method: "DELETE",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ user: inputUsername }),
-              });
-            }
-          } catch {
-            // Best-effort migration.
-          } finally {
-            if (migrationTimerRef.current) clearTimeout(migrationTimerRef.current);
-            migrationTimerRef.current = null;
-            setShowMigrationNotice(false);
-          }
-        }
-      }
-
-      // Store session
-      sessionStorage.setItem("txt-user", inputUsername);
-      sessionStorage.setItem("txt-pw", password);
-      if (accountId) {
-        sessionStorage.setItem("txt-id", accountId);
-      } else {
-        sessionStorage.removeItem("txt-id");
-      }
-      router.push("/editor");
-    } catch {
-      setError("Something went wrong. Try again.");
-      setLoading(false);
-      setStep("idle");
-    }
+    const id = noteId.trim();
+    if (!id) return;
+    router.push(`/${encodeURIComponent(id)}`);
   }
 
   const inputClass =
     "w-full h-11 rounded-lg px-3.5 text-[14px] tracking-[-0.01em] transition-colors duration-200";
-
-  const { theme, setTheme } = useTheme();
 
   return (
     <main className="min-h-dvh flex items-center justify-center px-6" style={{ background: "var(--bg)" }}>
@@ -141,52 +46,34 @@ export default function LoginPage() {
             </button>
           </div>
           <p className="text-[12px] tracking-[-0.01em]" style={{ color: "var(--text-muted)" }}>
-            encrypted notes
+            open your encrypted page
           </p>
         </header>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-2">
           <input
             type="text"
-            placeholder="username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            autoComplete="username"
+            placeholder="page ID"
+            value={noteId}
+            onChange={(e) => setNoteId(e.target.value)}
+            autoComplete="off"
             autoFocus
-            className={inputClass}
-            style={{ background: "var(--border)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
-          />
-          <input
-            type="password"
-            placeholder="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
             className={inputClass}
             style={{ background: "var(--border)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
           />
 
           <button
             type="submit"
-            disabled={loading || !username.trim() || !password}
+            disabled={!noteId.trim()}
             className="mt-2 w-full h-11 rounded-lg text-[13px] font-medium tracking-[-0.01em] transition-colors duration-200 disabled:cursor-not-allowed"
             style={{ background: "var(--text-primary)", color: "var(--bg)" }}
           >
-            {loading
-              ? step === "deriving"
-                ? "Deriving key…"
-                : "Unlocking…"
-              : "Continue"}
+            Continue
           </button>
 
-          <div className="min-h-[16px] mt-1">
-            {error && (
-              <p className="text-[11px] text-red-400/60 tracking-[-0.01em]">{error}</p>
-            )}
-            {!error && showMigrationNotice && (
-              <p className="text-[11px] tracking-[-0.01em]" style={{ color: "var(--text-faint)" }}>Upgrading secure storage…</p>
-            )}
-          </div>
+          <p className="text-[11px] mt-1 tracking-[-0.01em]" style={{ color: "var(--text-faint)" }}>
+            Existing page: enter password next. New page: set one.
+          </p>
         </form>
       </div>
     </main>

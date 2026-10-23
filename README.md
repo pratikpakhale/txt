@@ -8,7 +8,7 @@
 
 ## How it works
 
-- Enter any **username + password** — no signup, no account creation
+- Enter any **page ID + password** — no signup, no site-wide account
 - Your notes are encrypted in the browser using **AES-256-GCM** before leaving your device
 - The encryption key is derived from your password via **PBKDF2** (200k iterations, SHA-256)
 - Storage key is an opaque account id:
@@ -27,7 +27,7 @@
 ## Encryption details
 
 ```
-key  = PBKDF2(password, salt=username, iterations=200_000, hash=SHA-256) → AES-GCM 256-bit
+key  = PBKDF2(password, salt=pageId, iterations=200_000, hash=SHA-256) → AES-GCM 256-bit
 blob = IV (12 bytes) || AES-GCM ciphertext
 ```
 
